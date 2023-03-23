@@ -3,40 +3,109 @@
 /*                                                        :::      ::::::::   */
 /*   get_next_line_bonus.c                              :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: wchan <wchan@student.hive.fi>              +#+  +:+       +#+        */
+/*   By: hunam <hunam@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2022/11/18 14:32:31 by wchan             #+#    #+#             */
-/*   Updated: 2022/11/23 12:48:44 by wchan            ###   ########.fr       */
+/*   Created: 2022/11/18 14:32:31 by etattevi          #+#    #+#             */
+/*   Updated: 2023/03/23 16:41:32 by hunam            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "get_next_line_bonus.h"
 
+int	chr_idx(const char *s, int c)
+{
+	int	i;
+
+	if (!s)
+		return (-1);
+	i = 0;
+	while (s[i])
+	{
+		if (s[i] == (char)c)
+			return (i);
+		i++;
+	}
+	if ((char)c == '\0')
+		return (i);
+	return (-1);
+}
+
+char	*has_nl(char *saved[OPEN_MAX], int fd)
+{
+	int			nl_idx;
+	char		*line;
+	char		*rem;
+
+	nl_idx = chr_idx(saved[fd], '\n');
+	if (nl_idx != -1)
+	{
+		line = ft_substr(saved[fd], 0, nl_idx + 1);
+		rem = ft_substr(saved[fd], nl_idx + 1, ft_strlen(saved[fd]) - nl_idx);
+		free(saved[fd]);
+		saved[fd] = rem;
+		return (line);
+	}
+	return (NULL);
+}
+
+char	*no_nl(char	*saved[OPEN_MAX], int fd)
+{
+	char	*out;
+
+	out = NULL;
+	if (saved[fd])
+	{
+		if (saved[fd][0] != '\0')
+			out = ft_strdup(saved[fd]);
+		free(saved[fd]);
+		saved[fd] = NULL;
+	}
+	return (out);
+}
+
+char	*ft_strjoin_free(char *s1, char *s2)
+{
+	char	*out;
+	size_t	i;
+	size_t	j;
+
+	if (!s1)
+		return (ft_strdup(s2));
+	if (!s2)
+		return (NULL);
+	out = malloc(sizeof(char) * (ft_strlen(s1) + ft_strlen(s2) + 1));
+	if (out == NULL)
+		return (NULL);
+	i = 0;
+	j = 0;
+	while (s1[j])
+		out[i++] = s1[j++];
+	j = 0;
+	while (s2[j])
+		out[i++] = s2[j++];
+	out[i] = '\0';
+	free(s1);
+	return (out);
+}
+
 char	*get_next_line(int fd)
 {
-	static char	*fds[OPEN_MAX];
-	int			nb_of_read;
+	static char	*saved[OPEN_MAX] = {NULL};
+	char		buff[BUFFER_SIZE + 1];
+	char		*line;
 	int			just_read;
-	int			tmp_i;
-	char		*tmp;
 
-	if (fd < 0 || BUFFER_SIZE < 1 || read(fd, 0, 0) == -1)
+	if (fd < 0 || BUFFER_SIZE < 1 || read(fd, NULL, 0) < 0)
 		return (NULL);
-	nb_of_read = 0;
 	while (42)
 	{
-		tmp = malloc(chr_i(fds[fd], '\0') + ++nb_of_read * BUFFER_SIZE + 1);
-		if (!tmp)
-			return (NULL);
-		ft_memmove(tmp, fds[fd], chr_i(fds[fd], '\0') + 1);
-		if (fds[fd] != tmp)
-			free(fds[fd]);
-		fds[fd] = tmp;
-		tmp_i = chr_i(fds[fd], '\0');
-		just_read = read(fd, fds[fd] + tmp_i, BUFFER_SIZE);
-		tmp_i += just_read;
-		tmp = eof(fds[fd], tmp, &just_read, tmp_i);
-		if (just_read)
-			return (tmp);
+		line = has_nl(saved, fd);
+		if (line)
+			return (line);
+		just_read = read(fd, buff, BUFFER_SIZE);
+		if (just_read == 0 && chr_idx(saved[fd], '\n') == -1)
+			return (no_nl(saved, fd));
+		buff[just_read] = '\0';
+		saved[fd] = ft_strjoin_free(saved[fd], buff);
 	}
 }
